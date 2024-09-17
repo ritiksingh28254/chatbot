@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 900px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        .chat-box {
+            height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            white-space: pre-wrap; /* Allows line breaks */
+        }
+        .chat-input {
+            width: calc(100% - 50px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .message {
+            margin: 10px 0;
+        }
+        .user-message {
+            text-align: right;
+            color: blue;
+        }
+        .bot-message {
+            text-align: left;
+            color: green;
+        }
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chat-box" class="chat-box"></div>
+        <div>
+            <input id="chat-input" class="chat-input" type="text" placeholder="Enter company name...">
+            <button class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        function appendMessage(content, className) {
+            var chatBox = document.getElementById('chat-box');
+            var messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + className;
+            messageDiv.innerHTML = content;  // Use innerHTML for HTML content
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function formatBalanceSheet(balanceSheetString) {
+            var rows = balanceSheetString.split('\n');
+            var tableHtml = "<table>";
+            tableHtml += "<tr><th>Metric</th><th>2024-03-31</th><th>2023-03-31</th><th>2022-03-31</th><th>2021-03-31</th></tr>";
+            
+            for (var i = 1; i < rows.length; i++) {
+                var columns = rows[i].split(/\s{2,}/); // Splits on two or more spaces
+                if (columns.length >= 5) {
+                    tableHtml += "<tr>";
+                    for (var j = 0; j < columns.length; j++) {
+                        tableHtml += "<td>" + columns[j] + "</td>";
+                    }
+                    tableHtml += "</tr>";
+                }
+            }
+            tableHtml += "</table>";
+            return tableHtml;
+        }
+
+        function sendMessage() {
+            var userInput = document.getElementById('chat-input').value;
+            if (userInput === "") {
+                alert("Please enter a message");
+                return;
+            }
+
+            // Display the user's message
+            appendMessage(userInput, 'user-message');
+
+            // Clear the input field
+            document.getElementById('chat-input').value = "";
+
+            // Send the user's message to the Flask server
+            fetch('/chatbot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: userInput })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Format the response as a table and display it
+                var balanceSheetStr = data.response;
+                if (balanceSheetStr.includes("Balance Sheet")) {
+                    var formattedTable = formatBalanceSheet(balanceSheetStr);
+                    appendMessage(formattedTable, 'bot-message');
+                } else {
+                    appendMessage(data.response, 'bot-message');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
